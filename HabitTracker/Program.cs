@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.Sqlite;
 using SQLitePCL;
 using System.Globalization;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace HabitTracker
 {
@@ -132,7 +133,10 @@ namespace HabitTracker
                 connection.Open();
                 var tableCmd = connection.CreateCommand();
                 tableCmd.CommandText =
-                    $"INSERT INTO drinking_water(date,quantity) VALUES('{date}', '{quantity}')";
+                    "INSERT INTO drinking_water(date,quantity) VALUES(@date, @quantity)";
+
+                tableCmd.Parameters.AddWithValue("@date", date);
+                tableCmd.Parameters.AddWithValue("@quantity", quantity);
 
                 tableCmd.ExecuteNonQuery();
                 connection.Close();
@@ -193,7 +197,9 @@ namespace HabitTracker
                 connection.Open();
                 var tableCmd = connection.CreateCommand();
                 tableCmd.CommandText =
-                    $"DELETE from drinking_water WHERE Id = '{recordId}'";
+                $"DELETE from drinking_water WHERE Id = @id";
+
+                tableCmd.Parameters.AddWithValue("@id", recordId);
 
                 int rowCount = tableCmd.ExecuteNonQuery();
 
@@ -219,7 +225,9 @@ namespace HabitTracker
                 connection.Open();
 
                 var checkCmd = connection.CreateCommand();
-                checkCmd.CommandText = $"SELECT EXISTS(SELECT 1 FROM drinking_water WHERE Id = {recordId})";
+                checkCmd.CommandText = $"SELECT EXISTS(SELECT 1 FROM drinking_water WHERE Id = @Id)";
+                checkCmd.Parameters.AddWithValue("@Id", recordId);
+
                 int checkQuery = Convert.ToInt32(checkCmd.ExecuteScalar());
 
                 if (checkQuery == 0)
@@ -233,7 +241,11 @@ namespace HabitTracker
                 int quantity = GetNumberInput("\n\nPlease insert number of glasses or other measure of your choice. (no decimals allowed)\n\n");
 
                 var tableCmd = connection.CreateCommand();
-                tableCmd.CommandText = $"UPDATE drinking_water SET date = '{date}', quantity = {quantity} WHERE Id = {recordId}";
+                tableCmd.CommandText = $"UPDATE drinking_water SET date = @date, quantity = @quantity WHERE Id = @id";
+
+                tableCmd.Parameters.AddWithValue("@date", date);
+                tableCmd.Parameters.AddWithValue("@quantity", quantity);
+                tableCmd.Parameters.AddWithValue("@id", recordId);
 
                 tableCmd.ExecuteNonQuery();
 
