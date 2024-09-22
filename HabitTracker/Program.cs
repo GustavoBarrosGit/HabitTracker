@@ -42,7 +42,59 @@ namespace HabitTracker
                 connection.Close();
             }
 
+            SeedData();
+
             GetUserInput();
+        }
+
+        private static void SeedData()
+        {
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                connection.Open();
+
+                var checkCmd = connection.CreateCommand();
+                checkCmd.CommandText = "SELECT COUNT(*) FROM habits";
+                int habitCount = Convert.ToInt32(checkCmd.ExecuteScalar());
+
+                if (habitCount == 0)
+                {
+                    var insertHabitCmd = connection.CreateCommand();
+                    insertHabitCmd.CommandText =
+                        @"INSERT INTO habits(HabitName, Unit) 
+                            VALUES('Drinking Water', 'glasses'),
+                                ('Running', 'km'),
+                                ('Reading', 'pages'),
+                                ('Meditation', 'minutes')";
+                    insertHabitCmd.ExecuteNonQuery();
+
+                    var getHabitIdCmd = connection.CreateCommand();
+                    getHabitIdCmd.CommandText = "SELECT Id FROM habits WHERE HabitName = 'Drinking Water'";
+                    int drinkingWaterHabitId = Convert.ToInt32(getHabitIdCmd.ExecuteScalar());
+
+                    var random = new Random();
+                    for (int i = 0; i < 100; i++)
+                    {
+                        var insertRecordCmd = connection.CreateCommand();
+                        insertRecordCmd.CommandText =
+                            @"INSERT INTO drinking_water(Date, Quantity, HabitId) 
+                              VALUES(@date, @quantity, @habitId)";
+
+                        var randomDate = DateTime.Now.AddDays(-random.Next(0, 30)).ToString("dd-MM-yy");
+                        var randomQuantity = random.Next(1, 11);
+
+                        insertRecordCmd.Parameters.AddWithValue("@date", randomDate);
+                        insertRecordCmd.Parameters.AddWithValue("@quantity", randomQuantity);
+                        insertRecordCmd.Parameters.AddWithValue("@habitId", drinkingWaterHabitId);
+
+                        insertRecordCmd.ExecuteNonQuery();
+                    }
+
+                    Console.WriteLine("Seed data for Drinking Water habit has been inserted.");
+                }
+
+                connection.Close();
+            }
         }
 
         static void GetUserInput()
