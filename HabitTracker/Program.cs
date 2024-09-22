@@ -1,5 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
 using SQLitePCL;
+using System.Data;
 using System.Globalization;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -18,13 +19,24 @@ namespace HabitTracker
                 connection.Open();
                 var tableCmd = connection.CreateCommand();
 
+                //Create habits table
+                tableCmd.CommandText =
+                    @"CREATE TABLE IF NOT EXISTS habits (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        HabitName TEXT,
+                        Unit TEXT
+                    )";
+                tableCmd.ExecuteNonQuery();
+
+                //drinking_water includes a foreign key to include a HabitId column
                 tableCmd.CommandText =
                     @"CREATE TABLE IF NOT EXISTS drinking_water (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
                         Date TEXT,
-                        Quantity INTEGER
+                        Quantity INTEGER,
+                        HabitId INTEGER,
+                        FOREIGN KEY (HabitId) REFERENCES habits(Id)
                     )";
-
                 tableCmd.ExecuteNonQuery();
 
                 connection.Close();
@@ -47,6 +59,7 @@ namespace HabitTracker
                 Console.WriteLine("Type 2 to Insert Records.");
                 Console.WriteLine("Type 3 to Delete Records.");
                 Console.WriteLine("Type 4 to Update Records.");
+                Console.WriteLine("Type 5 to Create a New Habit");
                 Console.WriteLine("------------------------------------------");
 
                 string command = Console.ReadLine();
@@ -69,6 +82,9 @@ namespace HabitTracker
                         break;
                     case "4":
                         Update();
+                        break;
+                    case "5":
+                        CreateNewHabit();
                         break;
                     default:
                         Console.Clear();
@@ -143,48 +159,6 @@ namespace HabitTracker
             }
         }
 
-        private static int GetNumberInput(string message)
-        {
-            Console.WriteLine(message);
-
-            string numberInput = Console.ReadLine();
-
-            if (numberInput == "0")
-            {
-                GetUserInput();
-            }
-
-            while(!Int32.TryParse(numberInput, out _) || Convert.ToInt32(numberInput) < 0)
-            {
-                Console.WriteLine("\n\nInvalid number. Try again.\n\n");
-                numberInput = Console.ReadLine();
-            }
-
-            int finalInput = Convert.ToInt32(numberInput);
-
-            return finalInput;
-
-        }
-
-        private static string GetDateInput(string message)
-        {
-            Console.WriteLine(message);
-            string dateInput = Console.ReadLine();
-
-            if (dateInput == "0")
-            {
-                GetUserInput();
-            }
-
-            while (!DateTime.TryParseExact(dateInput, "dd-MM-yy", new CultureInfo("en-US"), DateTimeStyles.None, out _))
-            {
-                Console.WriteLine("\n\nInvalid date. (Format: (dd-mm-yy). Try again:\n\n");
-                dateInput = Console.ReadLine();
-            }
-
-            return dateInput;
-        }
-
         private static void Delete()
         {
             Console.Clear();
@@ -253,7 +227,100 @@ namespace HabitTracker
 
             }
         }
+
+        private static void CreateNewHabit()
+        {
+            Console.Clear();
+            string habitName = GetStringInput("Enter the name of the new habit");
+            string unit = GetStringInput("Enter the unit of measurement");
+
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                connection.Open();
+                var tableCmd = connection.CreateCommand();
+                tableCmd.CommandText =
+                    @"INSERT INTO habits(HabitName, Unit) 
+                        VALUES(@habitName, @unit)";
+
+                tableCmd.Parameters.AddWithValue("@habitName", habitName);
+                tableCmd.Parameters.AddWithValue("@unit", unit);
+
+                tableCmd.ExecuteNonQuery();
+                connection.Close();
+            }
+
+            Console.WriteLine($"New habit '{habitName}' with unit '{unit}' created successfully!");
+        }
+
+        private static int GetNumberInput(string message)
+        {
+            Console.WriteLine(message);
+
+            string numberInput = Console.ReadLine();
+
+            if (numberInput == "0")
+            {
+                GetUserInput();
+            }
+
+            while (!Int32.TryParse(numberInput, out _) || Convert.ToInt32(numberInput) < 0)
+            {
+                Console.WriteLine("\n\nInvalid number. Try again.\n\n");
+                numberInput = Console.ReadLine();
+            }
+
+            int finalInput = Convert.ToInt32(numberInput);
+
+            return finalInput;
+
+        }
+
+        private static string GetDateInput(string message)
+        {
+            Console.WriteLine(message);
+            string dateInput = Console.ReadLine();
+
+            if (dateInput == "0")
+            {
+                GetUserInput();
+            }
+
+            while (!DateTime.TryParseExact(dateInput, "dd-MM-yy", new CultureInfo("en-US"), DateTimeStyles.None, out _))
+            {
+                Console.WriteLine("\n\nInvalid date. (Format: (dd-mm-yy). Try again:\n\n");
+                dateInput = Console.ReadLine();
+            }
+
+            return dateInput;
+        }
+
+        private static string GetStringInput(string message)
+        {
+            string stringInput = "";
+
+            while (true)
+            {
+                Console.WriteLine(message);
+                stringInput = Console.ReadLine();
+
+                if (string.IsNullOrEmpty(stringInput))
+                {
+                    Console.WriteLine("\nInput cannot be empty. Please try again.");
+                }
+                else if (stringInput.Length < 3)
+                {
+                    Console.WriteLine("\nInput must be at least 3 characters long. Please try again.");
+                }
+                else
+                {
+                    break; // Valid input, exit the loop
+                }
+            }
+
+            return stringInput;
+        }
     }
+
 }
 
 public class DrinkingWater
